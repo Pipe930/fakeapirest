@@ -26,7 +26,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 BASE_APPS = [
-    'django.contrib.admin',
+    #'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -35,7 +35,7 @@ BASE_APPS = [
 ]
 
 LOCAL_APPS = [
-
+    'apps.user.apps.UserConfig'
 ]
 
 THIRD_APPS = [
@@ -165,6 +165,8 @@ SIMPLE_JWT = {
 
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
+
+AUTH_USER_MODEL = 'user.User'
 
 CORS_ALLOW_METHODS = ['DELETE','GET','OPTIONS','POST','PUT']
 
