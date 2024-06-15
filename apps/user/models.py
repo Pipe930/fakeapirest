@@ -3,7 +3,7 @@ from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, Permis
 
 class UserManager(BaseUserManager):
 
-    def _create_user(self, first_name, last_name, username, email, password, is_staff, is_superuser, **extra_fields):
+    def _create_user(self, first_name, last_name, username, email, password, is_staff, is_superuser, birthdate, age, phone, gender, **extra_fields):
 
         user = self.model(
             last_name=last_name,
@@ -11,7 +11,11 @@ class UserManager(BaseUserManager):
             username=username,
             email=self.normalize_email(email),
             is_staff=is_staff,
-            is_superuser=is_superuser
+            is_superuser=is_superuser,
+            birthdate=birthdate,
+            age=age,
+            phone=phone,
+            gender=gender
         )
 
         user.set_password(password)
@@ -42,10 +46,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     created_date = models.DateTimeField(auto_now_add=True)
     is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
     birthdate = models.DateField()
     age = models.PositiveSmallIntegerField()
     phone = models.CharField(max_length=18, unique=True)
     gender = models.CharField(max_length=10, choices=UserGender.choices)
+    objects = UserManager()
 
     class Meta:
 
