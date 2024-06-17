@@ -121,7 +121,8 @@ class TokenRefreshView(CreateAPIView):
             return Response({"status_code": 400, "message": "Token invalido o expirado"})
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
-    
+
+# User Info View
 class UserInfoView(RetrieveAPIView):
 
     permission_classes = (IsAuthenticated,)
@@ -143,17 +144,16 @@ class UserInfoView(RetrieveAPIView):
         serializer = self.get_serializer(user)
 
         return Response({
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "username": user.username,
-            "email": user.email,
-            "gender": user.gender,
-            "phone": user.phone,
-            "age": user.age,
-            "birthdate": user.birthdate,
+            "first_name": serializer.data["first_name"],
+            "last_name": serializer.data["last_name"],
+            "username": serializer.data["username"],
+            "email": serializer.data["email"],
+            "gender": serializer.data["gender"],
+            "phone": serializer.data["phone"],
+            "age": serializer.data["age"],
+            "birthdate": serializer.data["birthdate"],
             "status_code": 200
         })
-
 
 # List Users View
 class ListUsersView(ListAPIView):

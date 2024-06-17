@@ -76,13 +76,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Address(models.Model):
 
-    id_address = models.BigAutoField(primary_key=True)
+    user_address = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     address = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=40)
     region = models.CharField(max_length=60)
     postal_code = models.CharField(max_length=10, unique=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
 
