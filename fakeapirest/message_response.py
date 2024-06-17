@@ -27,3 +27,11 @@ def message_response_bad_request(object_name:str, errors, method:str):
     elif method == "POST":
 
         return {"status_code": 400, "errors": errors, "message": f"Error, {object_name} no se creo con exito"}
+
+def message_response_no_content(object_name:str):
+
+    return {"status_code": 204, "message": f"No tenemos {object} registrados"}
+
+def message_response_update(object_name: str, data):
+
+    return {"status_code": 205, "data": data}

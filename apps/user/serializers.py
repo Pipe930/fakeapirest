@@ -1,4 +1,6 @@
-from rest_framework.serializers import ModelSerializer, CharField, ValidationError
+from rest_framework.serializers import ModelSerializer, CharField, ValidationError, Serializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import Token
 from .models import User
 
 class RegisterUserSerializer(ModelSerializer):
@@ -41,3 +43,43 @@ class RegisterUserSerializer(ModelSerializer):
         user = User.objects.create_user(**validated_data)
 
         return user
+    
+class ListUserSerializer(ModelSerializer):
+
+    class Meta:
+
+        model = User
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "username",
+            "email",
+            "age",
+            "gender",
+            "birthdate",
+            "phone",
+            "last_login",
+            "created_date",
+            "is_staff",
+            "is_superuser"
+        )
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+
+    @classmethod
+    def get_token(cls, user):
+
+        token = super().get_token(user)
+        token["id"] = user.id
+        token["username"] = user.username
+        token["email"] = user.email
+        token["is_superuser"] = user.is_superuser
+        token["is_staff"] = user.is_staff
+
+
+        return token
+
+class LogoutUserSerializer(Serializer):
+
+    refresh_token = CharField()

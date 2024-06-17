@@ -37,7 +37,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         female = "female"
         other = "other"
 
-    id_user = models.BigAutoField(primary_key=True)
     username = models.CharField(max_length=40, unique=True)
     email = models.EmailField(max_length=255, unique=True)
     first_name = models.CharField(max_length=20)
@@ -78,12 +77,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Address(models.Model):
 
     id_address = models.BigAutoField(primary_key=True)
-    name_address = models.CharField(max_length=100)
-    street = models.CharField(max_length=40)
-    number = models.PositiveSmallIntegerField()
+    address = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=40)
     region = models.CharField(max_length=60)
+    postal_code = models.CharField(max_length=10, unique=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
