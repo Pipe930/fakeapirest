@@ -1,20 +1,34 @@
 from django.contrib.auth import login, authenticate, logout
 from django.http import Http404
-from .serializers import RegisterUserSerializer, ListUserSerializer, CustomTokenObtainPairSerializer, LogoutUserSerializer
-from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
+from .serializers import (
+    RegisterUserSerializer, 
+    ListUserSerializer, 
+    CustomTokenObtainPairSerializer, 
+    LogoutUserSerializer,
+    UpdateUserSerializer
+)
+from rest_framework import status
+from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError as MessageError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from django.core.exceptions import FieldError, ValidationError
+from django.db.models import Q
 from .models import User
-from rest_framework import status
+from datetime import date
+from fakeapirest.pagination_custom import CustomPagination
 from fakeapirest.message_response import (
     message_response_created,
     message_response_bad_request,
-    message_response_list,
-    message_response_no_content
+    message_response_no_content,
+    message_response_detail,
+    message_response_update,
+    message_response_delete
 )
 
 # Register User View
@@ -159,12 +173,37 @@ class UserInfoView(RetrieveAPIView):
 class ListUsersView(ListAPIView):
 
     serializer_class = ListUserSerializer
-    queryset = User.objects.all().order_by("id")
+    queryset = User.objects.all()
+    pagination_class = CustomPagination
+    limit_queryset = True
+    filter_backends = (OrderingFilter,)
+    ordering_fields = ("id", "first_name", "last_name", "username", "email")
+    ordering = ("id",) 
+
+    def get_queryset(self):
+
+        limit = self.request.query_params.get('limit')
+        sort_by = self.request.query_params.get('sortBy')
+        order = self.request.query_params.get('order')
+
+        if sort_by and order:
+            if order == 'desc':
+                sort_by = '-' + sort_by
+            try:
+                self.queryset = self.queryset.order_by(sort_by)
+            except FieldError:
+                raise MessageError({"status_code": 404, "message": "La columna que ingresaste no existe"}, status.HTTP_404_NOT_FOUND)
+
+        if limit:
+            self.queryset = self.queryset[:int(limit)]
+
+        return self.queryset
 
     def get(self, request, format=None):
 
         users = self.get_queryset()
-        serializer = self.get_serializer(users, many=True)
+        pagination = self.paginate_queryset(users)
+        serializer = self.get_serializer(pagination, many=True)
 
         if not users.exists():
 
@@ -172,8 +211,131 @@ class ListUsersView(ListAPIView):
                 message_response_no_content("Usuarios"),
                 status.HTTP_204_NO_CONTENT
             )
+        
+        return self.get_paginated_response(serializer.data)
 
-        return Response(
-            message_response_list(serializer.data, users.count(), "usuarios"),
-            status.HTTP_200_OK)
+# Search Users View
+class SearchUsersView(ListAPIView):
+
+    serializer_class = ListUserSerializer
+    pagination_class = CustomPagination
+
+    def get(self, request, format=None):
+
+        username = request.GET.get('username', None)
+        email = request.GET.get('email', None)
+        first_name = request.GET.get('first_name', None)
+        last_name = request.GET.get('last_name', None)
+
+        filters = Q()
+        if username is not None:
+            filters &= Q(username__icontains=username)
+        if email is not None:
+            filters &= Q(email__icontains=email)
+        if first_name is not None:
+            filters &= Q(first_name__icontains=first_name)
+        if last_name is not None:
+            filters &= Q(last_name__icontains=last_name)
+
+        users = User.objects.filter(filters)
+
+        result_page = self.paginate_queryset(users)
+        serializer = self.get_serializer(result_page, many=True)
+        
+        return self.get_paginated_response(serializer.data)
+
+# Filter User View
+class FilterUserView(ListAPIView):
+
+    queryset = User.objects.all()
+    serializer_class = ListUserSerializer
+
+    def get_queryset(self):
+
+        gender = self.request.query_params.get("gender")
+        min_age = self.request.query_params.get("min_age")
+        max_age = self.request.query_params.get("max_age")
+        date_of_birth = self.request.query_params.get("birthdate")
+
+        query = Q()
+
+        if gender is not None:
+            query &= Q(gender=gender)
+
+        try:
+            if min_age is not None:
+                today = date.today()
+                min_birth_date = today.replace(year=today.year - int(min_age))
+                query &= Q(birthdate__lte=min_birth_date)
+
+            if max_age:
+                today = date.today()
+                max_birth_date = today.replace(year=today.year - int(max_age) - 1)
+                query &= Q(birthdate__gte=max_birth_date)
+        except ValueError:
+            raise MessageError({"status_code": 400, "message": "La edad tiene que ser en formato numerico"})
+
+        if date_of_birth is not None:
+            query &= Q(birthdate=date_of_birth)
+
+        try:
+            self.queryset = self.queryset.filter(query)
+        except ValidationError:
+            raise MessageError({"status_code": 400, "message": "El formato de fecha no es el correcto"})
+
+        return self.queryset
+    
+    def get(self, request, format=None):
+
+        users = self.get_queryset()
+        pagination = self.paginate_queryset(users)
+        serializer = self.get_serializer(pagination, many=True)
+
+        if not users.exists():
+
+            return Response(
+                message_response_no_content("Usuarios"),
+                status.HTTP_204_NO_CONTENT
+            )
+        
+        return self.get_paginated_response(serializer.data)
+
+# Detail, Update and Delete User View
+class DetailUserView(RetrieveUpdateDestroyAPIView):
+
+    def get_object(self, id:int):
+
+        try:
+            user = User.objects.get(id=id)
+        except User.DoesNotExist:
+            raise Http404
+
+        return user
+    
+    def get(self, request, id:int, format=None):
+
+        user = self.get_object(id)
+        serializer = ListUserSerializer(user)
+
+        return Response(message_response_detail(serializer.data), status.HTTP_200_OK)
+    
+    def update(self, request, id:int, format=None):
+
+        user = self.get_object(id)
+        serializer = UpdateUserSerializer(user, data=request.data)
+
+        if not serializer.is_valid():
+
+            return Response(message_response_bad_request("Usuario", serializer.errors, "PUT"), status.HTTP_400_BAD_REQUEST)
+        
+        serializer.save()
+
+        return Response(message_response_update("Usuario", serializer.data), status.HTTP_205_RESET_CONTENT)
+    
+    def delete(self, request, id:int, format=None):
+
+        user = self.get_object(id)
+        user.delete()
+
+        return Response(message_response_delete("Usuario"), status.HTTP_204_NO_CONTENT)
 

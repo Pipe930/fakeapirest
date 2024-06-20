@@ -30,8 +30,12 @@ def message_response_bad_request(object_name:str, errors, method:str):
 
 def message_response_no_content(object_name:str):
 
-    return {"status_code": 204, "message": f"No tenemos {object} registrados"}
+    return {"status_code": 204, "message": f"No tenemos {object_name} registrados"}
 
 def message_response_update(object_name: str, data):
 
-    return {"status_code": 205, "data": data}
+    return {"status_code": 205, "data": data, "message": f"{object_name} actualizado con exito"}
+
+def message_response_delete(object_name:str):
+    
+    return {"status_code": 204, "message": f"{object_name} eliminado con exito"}

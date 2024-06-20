@@ -1,6 +1,5 @@
 from rest_framework.serializers import ModelSerializer, CharField, ValidationError, Serializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import Token
 from .models import User
 
 class RegisterUserSerializer(ModelSerializer):
@@ -30,10 +29,13 @@ class RegisterUserSerializer(ModelSerializer):
     def validate(self, attrs):
 
         if attrs.get("password") != attrs.get("re_password"):
-            raise ValidationError({"message": "La contraseña y confirmacion de contraseña no coinciden"})
+            raise ValidationError({"status_code": 400, "message": "La contraseña y confirmacion de contraseña no coinciden"})
         
         if len(attrs.get("password")) < 8:
-            raise ValidationError({"message": "La contraseña tiene que tener un largo minimo de 8 caracteres"})
+            raise ValidationError({"status_code": 400, "message": "La contraseña tiene que tener un largo minimo de 8 caracteres"})
+        
+        if attrs.get("age") <= 16 or attrs.get("age") >= 90:
+            raise ValidationError({"status_code": 400, "message": "La edad tiene que estar en un rango de 18 a 100 años"})
 
         return attrs
 
@@ -64,6 +66,32 @@ class ListUserSerializer(ModelSerializer):
             "is_staff",
             "is_superuser"
         )
+
+class UpdateUserSerializer(ModelSerializer):
+
+    class Meta:
+
+        model = User
+        fields = (
+            "first_name",
+            "last_name",
+            "username",
+            "email",
+            "age",
+            "gender",
+            "birthdate",
+            "phone",
+            "is_staff",
+            "is_superuser"
+        )
+
+    def validate(self, attrs):
+
+        if attrs.get("age") <= 16 or attrs.get("age") >= 90:
+            raise ValidationError({"status_code": 400, "message": "La edad tiene que estar en un rango de 18 a 100 años"})
+
+        return attrs
+        
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 

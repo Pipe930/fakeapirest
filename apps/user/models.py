@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
+from datetime import date
 
 class UserManager(BaseUserManager):
 
@@ -61,6 +62,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email"]
 
+    def calculate_age(self):
+
+        today = date.today()
+        return today.year - self.birthdate.year - ((today.month, today.day) < (self.birthdate.month, self.birthdate.day))
+
     def get_full_name(self):
         return self.first_name + " " + self.last_name
     
@@ -73,21 +79,3 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
 
         return self.username
-
-class Address(models.Model):
-
-    user_address = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    address = models.CharField(max_length=100)
-    description = models.TextField(blank=True, null=True)
-    city = models.CharField(max_length=40)
-    region = models.CharField(max_length=60)
-    postal_code = models.CharField(max_length=10, unique=True)
-
-    class Meta:
-
-        db_table = "address"
-        verbose_name = "address"
-        verbose_name_plural = "addresses"
-
-    def __str__(self):
-        return self.name_address
