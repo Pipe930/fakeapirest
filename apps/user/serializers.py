@@ -1,6 +1,7 @@
 from rest_framework.serializers import ModelSerializer, CharField, ValidationError, Serializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
+from apps.address.models import Address
 
 class RegisterUserSerializer(ModelSerializer):
 
@@ -45,9 +46,22 @@ class RegisterUserSerializer(ModelSerializer):
         user = User.objects.create_user(**validated_data)
 
         return user
-    
+
+class AddressUserSerializer(ModelSerializer):
+
+    class Meta:
+
+        model = Address
+        fields = (
+            "address",
+            "city",
+            "postal_code",
+            "region"
+        )
+
 class ListUserSerializer(ModelSerializer):
 
+    address = AddressUserSerializer(many=False)
     class Meta:
 
         model = User
@@ -61,6 +75,7 @@ class ListUserSerializer(ModelSerializer):
             "gender",
             "birthdate",
             "phone",
+            "address",
             "last_login",
             "created_date",
             "is_staff",

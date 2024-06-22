@@ -2,6 +2,7 @@ country="./apps/cart/migrations"
 product="./apps/post/migrations"
 sale="./apps/product/migrations"
 user="./apps/user/migrations"
+address="./apps/address/migrations"
 
 if [ ! -d "$country" ]; then
     
@@ -37,6 +38,15 @@ if [ ! -d "$user" ]; then
     touch "$userfile"
 else
     echo "La carpeta $user ya existe."
+fi
+
+if [ ! -d "$address" ]; then
+    
+    mkdir "$address"
+    addressfile="$address/__init__.py"
+    touch "$addressfile"
+else
+    echo "La carpeta $address ya existe."
 fi
 
 python manage.py makemigrations
