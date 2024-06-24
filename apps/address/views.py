@@ -105,6 +105,7 @@ class DetailAddressView(RetrieveUpdateDestroyAPIView):
             status.HTTP_204_NO_CONTENT
         )
 
+# List and Create Region View
 class ListCreateRegionView(ListCreateAPIView):
 
     queryset = Region.objects.all()
