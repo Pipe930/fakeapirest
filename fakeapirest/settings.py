@@ -36,7 +36,8 @@ BASE_APPS = [
 
 LOCAL_APPS = [
     'apps.user.apps.UserConfig',
-    'apps.address.apps.AddressConfig'
+    'apps.address.apps.AddressConfig',
+    "apps.product.apps.ProductConfig"
 ]
 
 THIRD_APPS = [
@@ -150,6 +151,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Media Files Settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = join(BASE_DIR, 'media/')
+
+APPEND_SLASH=False
 
 # Rest Framwwork Settings
 REST_FRAMEWORK = {

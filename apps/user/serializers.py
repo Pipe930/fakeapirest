@@ -1,4 +1,4 @@
-from rest_framework.serializers import ModelSerializer, CharField, ValidationError, Serializer
+from rest_framework.serializers import ModelSerializer, CharField, ValidationError, Serializer, StringRelatedField
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
 from apps.address.models import Address
@@ -48,6 +48,8 @@ class RegisterUserSerializer(ModelSerializer):
         return user
 
 class AddressUserSerializer(ModelSerializer):
+
+    region = StringRelatedField()
 
     class Meta:
 

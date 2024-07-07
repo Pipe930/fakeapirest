@@ -182,6 +182,7 @@ class ListUsersView(ListAPIView):
 
     def get_queryset(self):
 
+        queryset = self.queryset
         limit = self.request.query_params.get('limit')
         sort_by = self.request.query_params.get('sortBy')
         order = self.request.query_params.get('order')
@@ -190,14 +191,21 @@ class ListUsersView(ListAPIView):
             if order == 'desc':
                 sort_by = '-' + sort_by
             try:
-                self.queryset = self.queryset.order_by(sort_by)
+                queryset = self.queryset.order_by(sort_by)
             except FieldError:
-                raise MessageError({"status_code": 404, "message": "La columna que ingresaste no existe"}, status.HTTP_404_NOT_FOUND)
+                raise MessageError({"status_code": 400, "message": "La columna que ingresaste no existe"}, status.HTTP_400_BAD_REQUEST)
+            
+        else:
+            queryset = queryset.order_by(*self.ordering)
 
         if limit:
-            self.queryset = self.queryset[:int(limit)]
 
-        return self.queryset
+            try:
+                queryset = self.queryset[:int(limit)]
+            except ValueError:
+                raise MessageError({"status_code": 400, "message": "El limite tiene que ser de tipo numerico"}, status.HTTP_400_BAD_REQUEST)
+
+        return queryset
 
     def get(self, request, format=None):
 
