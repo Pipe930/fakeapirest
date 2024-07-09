@@ -182,8 +182,13 @@ class ListUsersView(ListAPIView):
 
     def get_queryset(self):
 
+        try:
+            skip = int(self.request.query_params.get('skip', 0))
+            limit = int(self.request.query_params.get('limit', 0))
+        except ValueError:
+            raise MessageError({"status_code": 400, "message": "El limite tiene que ser de tipo numerico"}, status.HTTP_400_BAD_REQUEST)
+        
         queryset = self.queryset
-        limit = self.request.query_params.get('limit')
         sort_by = self.request.query_params.get('sortBy')
         order = self.request.query_params.get('order')
 
@@ -198,12 +203,9 @@ class ListUsersView(ListAPIView):
         else:
             queryset = queryset.order_by(*self.ordering)
 
-        if limit:
+        if limit >= 0 and skip >= 0:
 
-            try:
-                queryset = self.queryset[:int(limit)]
-            except ValueError:
-                raise MessageError({"status_code": 400, "message": "El limite tiene que ser de tipo numerico"}, status.HTTP_400_BAD_REQUEST)
+            queryset = self.queryset[skip:limit]
 
         return queryset
 
