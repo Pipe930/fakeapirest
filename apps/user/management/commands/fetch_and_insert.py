@@ -3,13 +3,43 @@ import random
 from itertools import islice
 from django.core.management.base import BaseCommand
 from apps.address.models import Region, Address
-from apps.product.models import Category, Product
+from apps.product.models import Category, Product, Review
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+
 User = get_user_model()
 
-class Command(BaseCommand):
 
+def get_random_user(users, selected_users):
+    if not users:
+        raise ValueError("No more users available for selection")
+
+    random_user = random.choice(users)
+    selected_users.add(random_user.id)
+    users.remove(random_user)
+
+    return random_user
+
+
+def get_category(name_category: str):
+    return Category.objects.filter(slug__icontains=name_category).first()
+
+
+def get_random_sold():
+    return random.randint(1, 1000)
+
+
+def bulk_create_objects(objects_model: tuple, objects_list: list, model: Model):
+    while True:
+        object_list = list(islice(objects_model, len(objects_list)))
+
+        if not object_list:
+            break
+
+        model.objects.bulk_create(object_list)
+
+
+class Command(BaseCommand):
     help = "Fetch data from another server and insert to my models"
     address_list = []
     domain = "http://dummyjson.com/"
@@ -24,25 +54,15 @@ class Command(BaseCommand):
         self.insert_address()
         self.insert_products()
 
-    def request_dummyjson(self, url:str):
+    def request_dummy(self, url: str):
 
         data = requests.get(self.domain + url)
 
         if not data.status_code == 200:
             return []
-        
+
         return data.json()
-    
-    def bulk_create_objects(self, objects_model:tuple, objects_list:list, model:Model):
 
-        while True:
-            object = list(islice(objects_model, len(objects_list)))
-
-            if not object:
-                break
-
-            model.objects.bulk_create(object)
-    
     def insert_list_address(self, address_object):
 
         address = {
@@ -55,42 +75,30 @@ class Command(BaseCommand):
 
     def insert_users(self):
 
-        users_list = self.request_dummyjson("users?limit=200")["users"]
+        users_list = self.request_dummy("users?limit=200")["users"]
 
         for user in users_list:
-
             self.insert_list_address(user.get("address"))
 
         try:
             objects_user = (User(
-                first_name = user.get("firstName"),
-                last_name = user.get("lastName"),
-                username = user.get("username"),
-                email = user.get("email"),
-                age = user.get("age"),
-                phone = user.get("phone"),
-                birthdate = user.get("birthDate"),
-                gender = user.get("gender"),
-                password = user.get("password")
+                first_name=user.get("firstName"),
+                last_name=user.get("lastName"),
+                username=user.get("username"),
+                email=user.get("email"),
+                age=user.get("age"),
+                phone=user.get("phone"),
+                birthdate=user.get("birthDate"),
+                gender=user.get("gender"),
+                password=user.get("password")
             ) for user in users_list)
 
-            self.bulk_create_objects(objects_user, users_list, User)
+            bulk_create_objects(objects_user, users_list, User)
 
             self.stdout.write(self.style.SUCCESS("[+] Users imported and registered successfully!"))
 
         except Exception:
             self.stdout.write(self.style.ERROR("[-] Error, users weren't registered correctly"))
-
-    def get_random_user(self, users, selected_users):
-
-        if not users:
-            raise ValueError("No more users available for selection")
-
-        random_user = random.choice(users)
-        selected_users.add(random_user.id)
-        users.remove(random_user)
-
-        return random_user
 
     def insert_address(self):
 
@@ -103,23 +111,24 @@ class Command(BaseCommand):
         try:
             objects_address = (Address(
 
-                address = address.get("address"),
-                city = address.get("city"),
-                postal_code = address.get("postal_code"),
-                region = random.choice(regions),
-                user = self.get_random_user(users, selected_users)
+                address=address.get("address"),
+                city=address.get("city"),
+                postal_code=address.get("postal_code"),
+                region=random.choice(regions),
+                user=get_random_user(users, selected_users)
             ) for address in self.address_list)
 
-            self.bulk_create_objects(objects_address, self.address_list, Address)
-            
+            bulk_create_objects(objects_address, self.address_list, Address)
+
             self.stdout.write(self.style.SUCCESS("[+] Addresses imported and registered successfully!"))
 
         except Exception:
             self.stdout.write(self.style.ERROR("[-] Error, addresses weren't registered correctly"))
 
-    def insert_regions(self, url_api:str):
+    def insert_regions(self, url_api: str):
 
-        regions_data = requests.get(url_api, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"})
+        regions_data = requests.get(url_api, headers={
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"})
 
         if regions_data.status_code == 200:
             region_list = regions_data.json()
@@ -129,53 +138,69 @@ class Command(BaseCommand):
         try:
 
             objects_region = (Region(
-                name = region.get("nombre"),
-                code = region.get("codigo"),
-                latitude = region.get("lat"),
-                longitude = region.get("lng")
+                name=region.get("nombre"),
+                code=region.get("codigo"),
+                latitude=region.get("lat"),
+                longitude=region.get("lng")
             ) for region in region_list)
 
-            self.bulk_create_objects(objects_region, region_list, Region)
+            bulk_create_objects(objects_region, region_list, Region)
             self.stdout.write(self.style.SUCCESS("[+] Regions imported and registered successfully!"))
 
         except Exception:
             self.stdout.write(self.style.ERROR("[-] Error, users weren't registered correctly"))
 
-    def get_category(self, name_category:str):
-        return Category.objects.filter(slug__icontains=name_category).first()
-    
-    def get_random_sold(self):
-        return random.randint(1,1000)
+    def insert_reviews(self, list_products: list):
+
+        for product_data in list_products:
+
+            product = Product.objects.filter(id_product=product_data.get("id")).first()
+
+            for review in product_data.get("reviews", []):
+
+                Review.objects.create(
+                     comment=review.get("comment"),
+                     starts=review.get("rating"),
+                     reviewer_name=review.get("reviewerName"),
+                     reviewer_email=review.get("reviewerEmail"),
+                     product=product
+                )
 
     def insert_products(self):
 
-        products_list = self.request_dummyjson("products?limit=150")["products"]
-        
+        products_list = self.request_dummy("products?limit=150")["products"]
         try:
             objects_products = (Product(
-                title = product.get("title"),
-                price = product.get("price"),
-                stock = product.get("stock"),
-                discount_price = product.get("discountPercentage"),
-                sold = self.get_random_sold(),
-                brand = product.get("brand"),
-                thumbnail = product.get("thumbnail"),
-                availability_status = product.get("availabilityStatus"),
-                warranty_information = product.get("warrantyInformation"),
-                rating = product.get("rating"),
-                description = product.get("description"),
-                category = self.get_category(product.get("category"))
+                title=product.get("title"),
+                price=product.get("price"),
+                stock=product.get("stock"),
+                discount_price=product.get("discountPercentage"),
+                sold=get_random_sold(),
+                brand=product.get("brand"),
+                thumbnail=product.get("thumbnail"),
+                availability_status=product.get("availabilityStatus"),
+                warranty_information=product.get("warrantyInformation"),
+                rating=product.get("rating"),
+                description=product.get("description"),
+                category=get_category(product.get("category"))
             )for product in products_list)
 
-            self.bulk_create_objects(objects_products, products_list, Product)
+            bulk_create_objects(objects_products, products_list, Product)
             self.stdout.write(self.style.SUCCESS("[+] Products imported and registered successfully!"))
 
         except Exception:
             self.stdout.write(self.style.ERROR("[-] Error, products weren't registered correctly"))
 
+        try:
+            self.insert_reviews(products_list)
+            self.stdout.write(self.style.SUCCESS("[+] Reviews imported and registered successfully!"))
+        except Exception:
+            self.stdout.write(self.style.ERROR("[-] Error, reviews weren't registered correctly"))
+
+
     def insert_categories(self):
 
-        categories_list = self.request_dummyjson("products/categories")
+        categories_list = self.request_dummy("products/categories")
 
         try:
             objects_categories = (Category(
@@ -183,7 +208,7 @@ class Command(BaseCommand):
                 slug=category.get("slug")
             ) for category in categories_list)
 
-            self.bulk_create_objects(objects_categories, categories_list, Category)
+            bulk_create_objects(objects_categories, categories_list, Category)
             self.stdout.write(self.style.SUCCESS("[+] Categories imported and registered successfully!"))
 
         except Exception:

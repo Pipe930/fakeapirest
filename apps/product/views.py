@@ -1,10 +1,11 @@
+from django.core.exceptions import FieldError
+from django.http import Http404
+from django.db.models import Q
 from rest_framework.response import Response
 from fakeapirest.pagination_custom import CustomPagination
 from rest_framework.filters import OrderingFilter
-from django.core.exceptions import FieldError
 from rest_framework.exceptions import ValidationError as MessageError
 from .serializers import ListCategorySerializer, ListProductSerializer, CreateProductSerializer
-from django.http import Http404
 from rest_framework import status
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from .models import Category, Product
@@ -51,7 +52,7 @@ class ArrayCategoriesView(ListAPIView):
             list_categories.append(category.get("slug"))
 
         return Response(list_categories, status.HTTP_200_OK)
-    
+
 class ListCreateProductView(ListCreateAPIView):
 
     queryset = Product.objects.all().order_by("title")
@@ -63,19 +64,14 @@ class ListCreateProductView(ListCreateAPIView):
 
     def get_queryset(self):
 
-
-        try:
-            limit = int(self.request.query_params.get('limit', 0))
-            skip = int(self.request.query_params.get('skip', 0))
-        except ValueError:
-            raise MessageError({"status_code": 400, "message": "El limite o el skip tiene que ser de tipo numerico"}, status.HTTP_400_BAD_REQUEST)
-        
         queryset = self.queryset
+        limit = self.request.query_params.get('limit')
+        skip = self.request.query_params.get('skip')
         sort_by = self.request.query_params.get('sortBy')
         order = self.request.query_params.get('order')
 
         if sort_by and order:
-            
+
             if order == 'desc':
                 sort_by = '-' + sort_by
             try:
@@ -83,9 +79,19 @@ class ListCreateProductView(ListCreateAPIView):
             except FieldError:
                 raise MessageError({"status_code": 404, "message": "La columna que ingresaste no existe"}, status.HTTP_404_NOT_FOUND)
 
-        if limit >= 0 and skip >= 0:
+        try:
 
-            queryset = self.queryset[skip:limit]
+            skip = 0 if skip is None else int(skip)
+
+            if limit is not None:
+                queryset = queryset[:skip + int(limit)]
+
+            if skip is not None:
+                queryset = queryset[int(skip):]
+
+        except ValueError:
+            raise MessageError({"status_code": 400, "message": "El limite o el skip tiene que ser de tipo numerico"},
+                               status.HTTP_400_BAD_REQUEST)
 
         return queryset
 
@@ -101,9 +107,9 @@ class ListCreateProductView(ListCreateAPIView):
                 message_response_no_content("productos"),
                 status.HTTP_204_NO_CONTENT
             )
-        
+
         return self.get_paginated_response(serializer.data)
-    
+
     def post(self, request, format=None):
 
         serializer = CreateProductSerializer(data=request.data)
@@ -123,14 +129,14 @@ class DetailProductView(RetrieveUpdateDestroyAPIView):
             raise Http404
 
         return product
-    
+
     def get(self, request, id:int, format=None):
 
         product = self.get_object(id)
         serializer = ListProductSerializer(product)
 
         return Response(message_response_detail(serializer.data), status.HTTP_200_OK)
-    
+
     def put(self, request, id:int, format=None):
 
         product = self.get_object(id)
@@ -139,11 +145,11 @@ class DetailProductView(RetrieveUpdateDestroyAPIView):
         if not serializer.is_valid():
 
             return Response(message_response_bad_request("producto", serializer.errors, "PUT"), status.HTTP_400_BAD_REQUEST)
-        
+
         serializer.save()
 
         return Response(message_response_update("producto", serializer.data), status.HTTP_205_RESET_CONTENT)
-    
+
     def delete(self, request, id:int, format=None):
 
         product = self.get_object(id)
@@ -154,9 +160,39 @@ class DetailProductView(RetrieveUpdateDestroyAPIView):
 class ProductSearchView(ListAPIView):
 
     serializer_class = ListProductSerializer
+    pagination_class = CustomPagination
 
     def get(self, request, format=None):
 
-        
+        title_product = request.GET.get("title")
+        products = Product.objects.filter(Q(title__icontains=title_product))
 
-        return super().get(request)
+        page_list = self.paginate_queryset(products)
+        serializer = self.get_serializer(page_list, many=True)
+
+        return self.get_paginated_response(serializer.data)
+
+class ProductFilterView(ListAPIView):
+
+    serializer_class = ListProductSerializer
+    pagination_class = CustomPagination
+
+    def get_object(self, name_category:str):
+
+        category = Category.objects.filter(name=name_category).first()
+
+        if category is not None:
+            return category
+
+        raise Http404
+
+    def get(self, request, category:str, format=None):
+
+        category = self.get_object(category)
+
+        products_filter = Product.objects.filter(category=category.id_category)
+        page_list = self.paginate_queryset(products_filter)
+        serializer = self.get_serializer(page_list, many=True)
+
+        return self.get_paginated_response(serializer.data)
+

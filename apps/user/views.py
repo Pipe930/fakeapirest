@@ -1,9 +1,9 @@
 from django.contrib.auth import login, authenticate, logout
 from django.http import Http404
 from .serializers import (
-    RegisterUserSerializer, 
-    ListUserSerializer, 
-    CustomTokenObtainPairSerializer, 
+    RegisterUserSerializer,
+    ListUserSerializer,
+    CustomTokenObtainPairSerializer,
     LogoutUserSerializer,
     UpdateUserSerializer
 )
@@ -31,30 +31,28 @@ from fakeapirest.message_response import (
     message_response_delete
 )
 
+
 # Register User View
 class RegisterUserView(CreateAPIView):
-
     serializer_class = RegisterUserSerializer
 
     def post(self, request, format=None):
-
         serializer = self.get_serializer(data=request.data)
 
         if not serializer.is_valid():
-
             return Response(
                 message_response_bad_request("Usuario", serializer.errors, "POST"),
                 status.HTTP_400_BAD_REQUEST)
-        
+
         serializer.save()
 
         return Response(
-            message_response_created("Usuario", serializer.data), 
+            message_response_created("Usuario", serializer.data),
             status.HTTP_201_CREATED)
+
 
 # Login Authenticate User View
 class LoginView(TokenObtainPairView):
-
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request):
@@ -63,24 +61,22 @@ class LoginView(TokenObtainPairView):
         serializer.is_valid(raise_exception=True)
 
         user = authenticate(
-            username=request.data["username"], 
+            username=request.data["username"],
             password=request.data["password"])
-        
-        if user is None:
 
+        if user is None:
             return Response(
                 {"status_code": 401, "error": "Usuario o contraseña invalidos"},
                 status.HTTP_401_UNAUTHORIZED
             )
 
         if not user.is_active:
-
             return Response(
                 {"status_code": 401, "error": "El usuario no se encuentra activo"}
             )
-        
+
         login(request, user)
-        
+
         token = self.get_serializer().get_token(user)
         refresh_token = str(token)
         access_token = str(token.access_token)
@@ -95,10 +91,10 @@ class LoginView(TokenObtainPairView):
             "status_code": 200,
             "message": "Authenticacion realizada con exito"
         })
-    
+
+
 # Logout User View
 class LogoutView(CreateAPIView):
-
     permission_classes = (IsAuthenticated,)
     serializer_class = LogoutUserSerializer
 
@@ -118,11 +114,11 @@ class LogoutView(CreateAPIView):
                             status.HTTP_400_BAD_REQUEST)
 
         return Response({"status_code": 200, "message": "Sesion terminada con exito"},
-                            status.HTTP_200_OK)
+                        status.HTTP_200_OK)
+
 
 # Refresh Token User View
 class TokenRefreshView(CreateAPIView):
-
     permission_classes = (IsAuthenticated,)
     serializer_class = TokenRefreshSerializer
 
@@ -136,13 +132,13 @@ class TokenRefreshView(CreateAPIView):
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
+
 # User Info View
 class UserInfoView(RetrieveAPIView):
-
     permission_classes = (IsAuthenticated,)
     serializer_class = ListUserSerializer
 
-    def get_object(self, id:int):
+    def get_object(self, id: int):
 
         try:
             user = User.objects.get(id=id)
@@ -151,7 +147,7 @@ class UserInfoView(RetrieveAPIView):
             raise Http404
 
         return user
-    
+
     def get(self, request, format=None):
 
         user = self.get_object(request.user.id)
@@ -169,26 +165,22 @@ class UserInfoView(RetrieveAPIView):
             "status_code": 200
         })
 
+
 # List Users View
 class ListUsersView(ListAPIView):
-
     serializer_class = ListUserSerializer
     queryset = User.objects.all()
     pagination_class = CustomPagination
     limit_queryset = True
     filter_backends = (OrderingFilter,)
     ordering_fields = ("id", "first_name", "last_name", "username", "email")
-    ordering = ("id",) 
+    ordering = ("id",)
 
     def get_queryset(self):
 
-        try:
-            skip = int(self.request.query_params.get('skip', 0))
-            limit = int(self.request.query_params.get('limit', 0))
-        except ValueError:
-            raise MessageError({"status_code": 400, "message": "El limite tiene que ser de tipo numerico"}, status.HTTP_400_BAD_REQUEST)
-        
         queryset = self.queryset
+        skip = int(self.request.query_params.get('skip'))
+        limit = int(self.request.query_params.get('limit'))
         sort_by = self.request.query_params.get('sortBy')
         order = self.request.query_params.get('order')
 
@@ -198,14 +190,25 @@ class ListUsersView(ListAPIView):
             try:
                 queryset = self.queryset.order_by(sort_by)
             except FieldError:
-                raise MessageError({"status_code": 400, "message": "La columna que ingresaste no existe"}, status.HTTP_400_BAD_REQUEST)
-            
+                raise MessageError({"status_code": 400, "message": "La columna que ingresaste no existe"},
+                                   status.HTTP_400_BAD_REQUEST)
+
         else:
             queryset = queryset.order_by(*self.ordering)
 
-        if limit >= 0 and skip >= 0:
+        try:
 
-            queryset = self.queryset[skip:limit]
+            skip = 0 if skip is None else int(skip)
+
+            if limit is not None:
+                queryset = queryset[:skip + int(limit)]
+
+            if skip is not None:
+                queryset = queryset[int(skip):]
+
+        except ValueError:
+            raise MessageError({"status_code": 400, "message": "El limite o el skip tiene que ser de tipo numerico"},
+                               status.HTTP_400_BAD_REQUEST)
 
         return queryset
 
@@ -216,17 +219,16 @@ class ListUsersView(ListAPIView):
         serializer = self.get_serializer(pagination, many=True)
 
         if not users.exists():
-
             return Response(
                 message_response_no_content("Usuarios"),
                 status.HTTP_204_NO_CONTENT
             )
-        
+
         return self.get_paginated_response(serializer.data)
+
 
 # Search Users View
 class SearchUsersView(ListAPIView):
-
     serializer_class = ListUserSerializer
     pagination_class = CustomPagination
 
@@ -251,12 +253,12 @@ class SearchUsersView(ListAPIView):
 
         result_page = self.paginate_queryset(users)
         serializer = self.get_serializer(result_page, many=True)
-        
+
         return self.get_paginated_response(serializer.data)
+
 
 # Filter User View
 class FilterUserView(ListAPIView):
-
     queryset = User.objects.all()
     serializer_class = ListUserSerializer
 
@@ -294,7 +296,7 @@ class FilterUserView(ListAPIView):
             raise MessageError({"status_code": 400, "message": "El formato de fecha no es el correcto"})
 
         return self.queryset
-    
+
     def get(self, request, format=None):
 
         users = self.get_queryset()
@@ -302,18 +304,18 @@ class FilterUserView(ListAPIView):
         serializer = self.get_serializer(pagination, many=True)
 
         if not users.exists():
-
             return Response(
                 message_response_no_content("Usuarios"),
                 status.HTTP_204_NO_CONTENT
             )
-        
+
         return self.get_paginated_response(serializer.data)
+
 
 # Detail, Update and Delete User View
 class DetailUserView(RetrieveUpdateDestroyAPIView):
 
-    def get_object(self, id:int):
+    def get_object(self, id: int):
 
         try:
             user = User.objects.get(id=id)
@@ -321,31 +323,30 @@ class DetailUserView(RetrieveUpdateDestroyAPIView):
             raise Http404
 
         return user
-    
-    def get(self, request, id:int, format=None):
+
+    def get(self, request, id: int, format=None):
 
         user = self.get_object(id)
         serializer = ListUserSerializer(user)
 
         return Response(message_response_detail(serializer.data), status.HTTP_200_OK)
-    
-    def update(self, request, id:int, format=None):
+
+    def update(self, request, id: int, format=None):
 
         user = self.get_object(id)
         serializer = UpdateUserSerializer(user, data=request.data)
 
         if not serializer.is_valid():
+            return Response(message_response_bad_request("Usuario", serializer.errors, "PUT"),
+                            status.HTTP_400_BAD_REQUEST)
 
-            return Response(message_response_bad_request("Usuario", serializer.errors, "PUT"), status.HTTP_400_BAD_REQUEST)
-        
         serializer.save()
 
         return Response(message_response_update("Usuario", serializer.data), status.HTTP_205_RESET_CONTENT)
-    
-    def delete(self, request, id:int, format=None):
+
+    def delete(self, request, id: int, format=None):
 
         user = self.get_object(id)
         user.delete()
 
         return Response(message_response_delete("Usuario"), status.HTTP_204_NO_CONTENT)
-

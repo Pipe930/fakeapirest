@@ -12,9 +12,23 @@ class ListCategorySerializer(ModelSerializer):
             "slug"
         )
 
+class ListReviewSerializer(ModelSerializer):
+
+    class Meta:
+
+        model = Review
+        fields = (
+            "comment",
+            "starts",
+            "create_date",
+            "reviewer_name",
+            "reviewer_email"
+        )
+
 class ListProductSerializer(ModelSerializer):
 
     category = StringRelatedField()
+    reviews = ListReviewSerializer(many=True, read_only=True)
 
     class Meta:
 
@@ -32,6 +46,7 @@ class ListProductSerializer(ModelSerializer):
             "warranty_information",
             "review_count",
             "rating",
+            "reviews",
             "description",
             "create_date",
             "category"
