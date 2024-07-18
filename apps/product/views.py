@@ -42,7 +42,6 @@ class ArrayCategoriesView(ListAPIView):
     def get(self, request, format=None):
 
         list_categories = []
-
         query = self.get_queryset()
 
         if not query.exists():
@@ -98,8 +97,6 @@ class ListCreateProductView(ListCreateAPIView):
     def get(self, request, format=None):
 
         users = self.get_queryset()
-        pagination = self.paginate_queryset(users)
-        serializer = ListProductSerializer(pagination, many=True)
 
         if not users.exists():
 
@@ -107,6 +104,9 @@ class ListCreateProductView(ListCreateAPIView):
                 message_response_no_content("productos"),
                 status.HTTP_204_NO_CONTENT
             )
+
+        pagination = self.paginate_queryset(users)
+        serializer = ListProductSerializer(pagination, many=True)
 
         return self.get_paginated_response(serializer.data)
 
@@ -166,7 +166,6 @@ class ProductSearchView(ListAPIView):
 
         title_product = request.GET.get("title")
         products = Product.objects.filter(Q(title__icontains=title_product))
-
         page_list = self.paginate_queryset(products)
         serializer = self.get_serializer(page_list, many=True)
 
@@ -189,7 +188,6 @@ class ProductFilterView(ListAPIView):
     def get(self, request, category:str, format=None):
 
         category = self.get_object(category)
-
         products_filter = Product.objects.filter(category=category.id_category)
         page_list = self.paginate_queryset(products_filter)
         serializer = self.get_serializer(page_list, many=True)

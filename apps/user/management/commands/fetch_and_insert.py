@@ -4,6 +4,7 @@ from itertools import islice
 from django.core.management.base import BaseCommand
 from apps.address.models import Region, Address
 from apps.product.models import Category, Product, Review
+from apps.cart.models import Cart, Item
 from django.contrib.auth import get_user_model
 from django.db.models import Model
 
@@ -53,6 +54,7 @@ class Command(BaseCommand):
         self.insert_users()
         self.insert_address()
         self.insert_products()
+        self.insert_cart()
 
     def request_dummy(self, url: str):
 
@@ -168,13 +170,13 @@ class Command(BaseCommand):
 
     def insert_products(self):
 
-        products_list = self.request_dummy("products?limit=150")["products"]
+        products_list = self.request_dummy("products?limit=190")["products"]
         try:
             objects_products = (Product(
                 title=product.get("title"),
                 price=product.get("price"),
                 stock=product.get("stock"),
-                discount_price=product.get("discountPercentage"),
+                discount_percentage=product.get("discountPercentage"),
                 sold=get_random_sold(),
                 brand=product.get("brand"),
                 thumbnail=product.get("thumbnail"),
@@ -213,3 +215,59 @@ class Command(BaseCommand):
 
         except Exception:
             self.stdout.write(self.style.ERROR("[-] Error, categories weren't registered correctly"))
+
+    def insert_cart(self):
+
+        carts_list = self.request_dummy("carts?limit=50")["carts"]
+
+        count = 0
+        count_cart = 95
+
+        try:
+            for cart in carts_list:
+
+                id_user = cart.get("userId")
+                count += 1
+
+                id_user = count if id_user > 200 else id_user
+                user = User.objects.filter(id=id_user).first()
+                cart_exists = Cart.objects.filter(id_cart_user=user.id).first()
+
+                if cart_exists is not None:
+                    user = User.objects.filter(id=count_cart).first()
+
+                    cart_created = Cart.objects.create(
+                        id_cart_user=user
+                    )
+                    count_cart += 1
+                else:
+
+                    cart_created = Cart.objects.create(
+                        id_cart_user=user
+                    )
+
+                for product in cart.get("products"):
+
+                    product_exists = Product.objects.filter(id_product=product.get("id")).first()
+
+                    if product_exists is None:
+                        product_exists = Product.objects.filter(id_product=random.randint(1, 190)).first()
+
+                    Item.objects.create(
+
+                        cart=cart_created,
+                        product=product_exists,
+                        quantity=product.get("quantity"),
+                        total=0
+                    )
+
+            self.stdout.write(self.style.SUCCESS("[+] Carts imported and registered successfully!"))
+
+        except Exception:
+            self.stdout.write(self.style.ERROR("[-] Error, carts weren't registered correctly"))
+
+
+
+
+
+

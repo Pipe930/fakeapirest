@@ -37,6 +37,7 @@ class ListProductSerializer(ModelSerializer):
             "id_product",
             "title",
             "price",
+            "discount_percentage",
             "stock",
             "sold",
             "brand",

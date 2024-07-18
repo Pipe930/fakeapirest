@@ -179,8 +179,8 @@ class ListUsersView(ListAPIView):
     def get_queryset(self):
 
         queryset = self.queryset
-        skip = int(self.request.query_params.get('skip'))
-        limit = int(self.request.query_params.get('limit'))
+        skip = self.request.query_params.get('skip')
+        limit = self.request.query_params.get('limit')
         sort_by = self.request.query_params.get('sortBy')
         order = self.request.query_params.get('order')
 
@@ -215,14 +215,15 @@ class ListUsersView(ListAPIView):
     def get(self, request, format=None):
 
         users = self.get_queryset()
-        pagination = self.paginate_queryset(users)
-        serializer = self.get_serializer(pagination, many=True)
 
         if not users.exists():
             return Response(
                 message_response_no_content("Usuarios"),
                 status.HTTP_204_NO_CONTENT
             )
+
+        pagination = self.paginate_queryset(users)
+        serializer = self.get_serializer(pagination, many=True)
 
         return self.get_paginated_response(serializer.data)
 

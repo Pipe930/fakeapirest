@@ -6,6 +6,7 @@ from django.utils.text import slugify
 
 
 class Category(models.Model):
+
     id_category = models.BigAutoField(primary_key=True)
     name = models.CharField(max_length=20, unique=True)
     slug = models.CharField(max_length=20, unique=True)
@@ -28,10 +29,11 @@ class CustomManager(models.Manager):
 
 
 class Product(models.Model):
+
     id_product = models.BigAutoField(primary_key=True)
     title = models.CharField(max_length=255, unique=True)
     price = models.PositiveIntegerField(default=0)
-    discount_price = models.PositiveIntegerField(default=0)
+    discount_percentage = models.DecimalField(default=0, max_digits=4, decimal_places=2)
     stock = models.PositiveIntegerField(default=0)
     sold = models.PositiveIntegerField(default=0)
     brand = models.CharField(max_length=60, null=True, blank=True)
@@ -67,6 +69,7 @@ pre_save.connect(set_slug, sender=Product)
 
 
 class Review(models.Model):
+
     id_review = models.BigAutoField(primary_key=True)
     comment = models.CharField(max_length=255)
     starts = models.PositiveSmallIntegerField()
@@ -82,6 +85,7 @@ class Review(models.Model):
 
 
 class ImageProduct(models.Model):
+
     id_image_product = models.BigAutoField(primary_key=True)
     url = models.URLField()
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
