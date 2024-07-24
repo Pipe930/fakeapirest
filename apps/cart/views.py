@@ -36,7 +36,7 @@ class ListCartView(ListAPIView):
 
         except ValueError:
             raise MessageError({"status_code": 400, "message": "El limite o el skip tiene que ser de tipo numerico"},
-                               status.HTTP_400_BAD_REQUEST)
+                                status.HTTP_400_BAD_REQUEST)
 
         return queryset
 

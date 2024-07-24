@@ -90,7 +90,7 @@ class ListCreateProductView(ListCreateAPIView):
 
         except ValueError:
             raise MessageError({"status_code": 400, "message": "El limite o el skip tiene que ser de tipo numerico"},
-                               status.HTTP_400_BAD_REQUEST)
+                                status.HTTP_400_BAD_REQUEST)
 
         return queryset
 
@@ -164,7 +164,7 @@ class ProductSearchView(ListAPIView):
 
     def get(self, request, format=None):
 
-        title_product = request.GET.get("title")
+        title_product = request.query_params.get("title")
         products = Product.objects.filter(Q(title__icontains=title_product))
         page_list = self.paginate_queryset(products)
         serializer = self.get_serializer(page_list, many=True)

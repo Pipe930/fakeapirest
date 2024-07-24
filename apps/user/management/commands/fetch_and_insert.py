@@ -5,13 +5,30 @@ from django.core.management.base import BaseCommand
 from apps.address.models import Region, Address
 from apps.product.models import Category, Product, Review
 from apps.cart.models import Cart, Item
+from apps.post.models import Post, Tags
 from django.contrib.auth import get_user_model
 from django.db.models import Model
 
 User = get_user_model()
 
+def get_random_tag(slug: str):
+
+    return Tags.objects.filter(slug=slug).first()
+
+def get_user(id: int):
+
+    user = User.objects.filter(id=id).first()
+
+    if user is None:
+
+        user_id_random = random.randint(1,200)
+
+        user = User.objects.filter(id=user_id_random).first()
+
+    return user
 
 def get_random_user(users, selected_users):
+
     if not users:
         raise ValueError("No more users available for selection")
 
@@ -49,12 +66,14 @@ class Command(BaseCommand):
 
         url_api_region = "https://apis.digital.gob.cl/dpa/regiones"
 
-        self.insert_categories()
-        self.insert_regions(url_api_region)
-        self.insert_users()
-        self.insert_address()
-        self.insert_products()
-        self.insert_cart()
+        #self.insert_categories()
+        #self.insert_regions(url_api_region)
+        #self.insert_users()
+        #self.insert_address()
+        #self.insert_products()
+        #self.insert_cart()
+        #self.insert_tag()
+        self.insert_post()
 
     def request_dummy(self, url: str):
 
@@ -161,11 +180,11 @@ class Command(BaseCommand):
             for review in product_data.get("reviews", []):
 
                 Review.objects.create(
-                     comment=review.get("comment"),
-                     starts=review.get("rating"),
-                     reviewer_name=review.get("reviewerName"),
-                     reviewer_email=review.get("reviewerEmail"),
-                     product=product
+                    comment=review.get("comment"),
+                    starts=review.get("rating"),
+                    reviewer_name=review.get("reviewerName"),
+                    reviewer_email=review.get("reviewerEmail"),
+                    product=product
                 )
 
     def insert_products(self):
@@ -198,7 +217,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("[+] Reviews imported and registered successfully!"))
         except Exception:
             self.stdout.write(self.style.ERROR("[-] Error, reviews weren't registered correctly"))
-
 
     def insert_categories(self):
 
@@ -265,9 +283,46 @@ class Command(BaseCommand):
 
         except Exception:
             self.stdout.write(self.style.ERROR("[-] Error, carts weren't registered correctly"))
+    
+    def insert_tag(self):
 
+        tags_list = self.request_dummy("posts/tags")
 
+        try:
 
+            objects_tags = (Tags(
+                name=tag.get("name"),
+                slug=tag.get("slug"),
+                description=""
+            ) for tag in tags_list)
 
+            bulk_create_objects(objects_tags, tags_list, Tags)
+            self.stdout.write(self.style.SUCCESS("[+] Tags imported and registered successfully!"))
 
+        except Exception:
+            self.stdout.write(self.style.ERROR("[-] Error, tags weren't registered correctly"))
+
+    def insert_post(self):
+
+        posts_list = self.request_dummy("posts?limit=250")["posts"]
+
+        try:
+
+            objects_posts = (Post(
+
+                title=post.get("title"),
+                body=post.get("body"),
+                likes=post.get("reactions")["likes"],
+                dislikes=post.get("reactions")["dislikes"],
+                views=post.get("views"),
+                tag=get_random_tag(post.get("tags")[0]),
+                author=get_user(post.get("userId"))
+
+            ) for post in posts_list)
+
+            bulk_create_objects(objects_posts, posts_list, Post)
+            self.stdout.write(self.style.SUCCESS("[+] Posts imported and registered successfully!"))
+
+        except Exception as e:
+            self.stdout.write(self.style.ERROR("[-] Error, posts weren't registered correctly"))
 
