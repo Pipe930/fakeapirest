@@ -191,7 +191,7 @@ class ListUsersView(ListAPIView):
                 queryset = self.queryset.order_by(sort_by)
             except FieldError:
                 raise MessageError({"status_code": 400, "message": "La columna que ingresaste no existe"},
-                                   status.HTTP_400_BAD_REQUEST)
+                                    status.HTTP_400_BAD_REQUEST)
 
         else:
             queryset = queryset.order_by(*self.ordering)

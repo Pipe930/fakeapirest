@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from apps.address.models import Region, Address
 from apps.product.models import Category, Product, Review
 from apps.cart.models import Cart, Item
-from apps.post.models import Post, Tags
+from apps.post.models import Post, Tags, Comment
 from django.contrib.auth import get_user_model
 from django.db.models import Model
 
@@ -15,6 +15,10 @@ def get_random_tag(slug: str):
 
     return Tags.objects.filter(slug=slug).first()
 
+def get_post(id_post: int):
+
+    return Post.objects.filter(id_post=id_post).first()
+
 def get_user(id: int):
 
     user = User.objects.filter(id=id).first()
@@ -22,7 +26,6 @@ def get_user(id: int):
     if user is None:
 
         user_id_random = random.randint(1,200)
-
         user = User.objects.filter(id=user_id_random).first()
 
     return user
@@ -44,7 +47,7 @@ def get_category(name_category: str):
 
 
 def get_random_sold():
-    return random.randint(1, 1000)
+    return random.randint(1, 100)
 
 
 def bulk_create_objects(objects_model: tuple, objects_list: list, model: Model):
@@ -66,14 +69,15 @@ class Command(BaseCommand):
 
         url_api_region = "https://apis.digital.gob.cl/dpa/regiones"
 
-        #self.insert_categories()
-        #self.insert_regions(url_api_region)
-        #self.insert_users()
-        #self.insert_address()
-        #self.insert_products()
-        #self.insert_cart()
-        #self.insert_tag()
+        self.insert_categories()
+        self.insert_regions(url_api_region)
+        self.insert_users()
+        self.insert_address()
+        self.insert_products()
+        self.insert_cart()
+        self.insert_tag()
         self.insert_post()
+        self.insert_comments()
 
     def request_dummy(self, url: str):
 
@@ -325,4 +329,25 @@ class Command(BaseCommand):
 
         except Exception as e:
             self.stdout.write(self.style.ERROR("[-] Error, posts weren't registered correctly"))
+    
+    def insert_comments(self):
+
+        comments_list = self.request_dummy("comments?limit=340")["comments"]
+
+        try:
+
+            objects_comments = (Comment(
+
+                body=comment.get("body"),
+                likes=comment.get("likes"),
+                user=get_user(comment.get("user")["id"]),
+                post=get_post(comment.get("postId"))
+
+            ) for comment in comments_list)
+
+            bulk_create_objects(objects_comments, comments_list, Comment)
+            self.stdout.write(self.style.SUCCESS("[+] Comments imported and registered successfully!"))
+
+        except Exception as e:
+            self.stdout.write(self.style.ERROR("[-] Error, comments weren't registered correctly"))
 

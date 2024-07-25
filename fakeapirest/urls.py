@@ -6,7 +6,7 @@ from apps.address.urls import urls_address
 from apps.product.urls import urls_category, urls_product
 from apps.cart.urls import urls_carts
 from apps.user.views import LoginView, LogoutView, TokenRefreshView
-from apps.post.urls import urls_posts
+from apps.post.urls import urls_posts, urls_comments
 
 urls_api = [
     path("users/", include(urls_users)),
@@ -15,6 +15,7 @@ urls_api = [
     path("products/", include(urls_product)),
     path("carts/", include(urls_carts)),
     path("posts/", include(urls_posts)),
+    path("comments/", include(urls_comments)),
     path("auth/login", LoginView.as_view(), name="loginuser"),
     path("auth/logout", LogoutView.as_view(), name="logoutuser"),
     path("token-jwt/refresh", TokenRefreshView.as_view(), name="refreshtoken")

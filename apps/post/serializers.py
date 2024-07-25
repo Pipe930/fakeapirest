@@ -1,5 +1,7 @@
 from rest_framework.serializers import ModelSerializer, StringRelatedField, SerializerMethodField
 from .models import Comment, Post, Tags
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class ListTagsSerializer(ModelSerializer):
 
@@ -55,16 +57,45 @@ class CreatePostSerializer(ModelSerializer):
             "author",
             "tag"
         )
+
+class UserCommentSerializer(ModelSerializer):
+
+    fullname = SerializerMethodField(method_name="get_fullname")
+
+    class Meta:
+
+        model = User
+        fields = (
+            "id",
+            "username",
+            "fullname"
+        )
+
+    def get_fullname(self, user):
+
+        return user.first_name + " " + user.last_name
     
 class ListCommentSerializer(ModelSerializer):
 
-    user = StringRelatedField()
+    user = UserCommentSerializer(many=False)
 
     class Meta:
 
         model = Comment
         fields = (
             "id_comment",
+            "body",
+            "likes",
+            "post",
+            "user"
+        )
+
+class CreateCommentSerializer(ModelSerializer):
+
+    class Meta:
+
+        model = Comment
+        fields = (
             "body",
             "likes",
             "post",
