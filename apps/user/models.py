@@ -49,7 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_superuser = models.BooleanField(default=False)
     birthdate = models.DateField()
     age = models.PositiveSmallIntegerField()
-    phone = models.CharField(max_length=18, unique=True)
+    phone = models.CharField(max_length=30, unique=True)
     gender = models.CharField(max_length=10, choices=UserGender.choices)
     objects = UserManager()
 

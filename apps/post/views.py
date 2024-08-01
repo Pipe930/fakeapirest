@@ -125,6 +125,10 @@ class SearchPostView(ListAPIView):
 
         title_post = self.request.query_params.get("title")
         posts = Post.objects.filter(Q(title__icontains=title_post))
+
+        if not posts.exists():
+            return Response({"status": 204, "message": "Post no encontrado"}, status.HTTP_204_NO_CONTENT)
+
         page_list = self.paginate_queryset(posts)
         serializer = self.get_serializer(page_list, many=True)
         

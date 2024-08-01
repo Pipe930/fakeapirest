@@ -10,7 +10,6 @@ class CustomPagination(PageNumberPagination):
         return Response({
             "status_code": 200,
             "total_items": self.page.paginator.count,
-            "limit_items": len(data),
             "total_pages": self.page.paginator.num_pages,
             "current_page": self.page.number,
             "results": data

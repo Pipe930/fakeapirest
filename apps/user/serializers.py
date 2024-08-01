@@ -122,7 +122,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["is_superuser"] = user.is_superuser
         token["is_staff"] = user.is_staff
 
-
         return token
 
 class LogoutUserSerializer(Serializer):

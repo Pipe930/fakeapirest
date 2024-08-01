@@ -166,6 +166,10 @@ class ProductSearchView(ListAPIView):
 
         title_product = request.query_params.get("title")
         products = Product.objects.filter(Q(title__icontains=title_product))
+
+        if not products.exists():
+            return Response({"status": 204, "message": "Producto no encontrado"}, status.HTTP_204_NO_CONTENT) 
+
         page_list = self.paginate_queryset(products)
         serializer = self.get_serializer(page_list, many=True)
 

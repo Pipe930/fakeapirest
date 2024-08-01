@@ -110,4 +110,11 @@ With the Docker image created, we will run the project through Docker:
 
     docker compose up
 
+## Testing
+
+A couple of unit tests were developed for each application, and each view underwent a unit test to verify the functionality of the endpoint and to ensure that there are no modifications causing errors in other functionalities of the API. To run the tests, you need to enter the following command:
+
+    python manage.py test
+
+All the unit tests located within the `tests` file, where all the test files are, will be executed.
 

@@ -34,6 +34,7 @@ from fakeapirest.message_response import (
 
 # Register User View
 class RegisterUserView(CreateAPIView):
+    
     serializer_class = RegisterUserSerializer
 
     def post(self, request, format=None):
@@ -53,6 +54,7 @@ class RegisterUserView(CreateAPIView):
 
 # Login Authenticate User View
 class LoginView(TokenObtainPairView):
+
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request):
@@ -78,23 +80,22 @@ class LoginView(TokenObtainPairView):
         login(request, user)
 
         token = self.get_serializer().get_token(user)
-        refresh_token = str(token)
-        access_token = str(token.access_token)
 
         return Response({
             "first_name": user.first_name,
             "last_name": user.last_name,
             "username": user.username,
             "email": user.email,
-            "refresh": refresh_token,
-            "access": access_token,
+            "refresh": str(token),
+            "access": str(token.access_token),
             "status_code": 200,
             "message": "Authenticacion realizada con exito"
-        })
+        }, status.HTTP_200_OK)
 
 
 # Logout User View
 class LogoutView(CreateAPIView):
+
     permission_classes = (IsAuthenticated,)
     serializer_class = LogoutUserSerializer
 
@@ -104,7 +105,6 @@ class LogoutView(CreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-
             token = RefreshToken(serializer.validated_data["refresh_token"])
             token.blacklist()
 
@@ -119,6 +119,7 @@ class LogoutView(CreateAPIView):
 
 # Refresh Token User View
 class TokenRefreshView(CreateAPIView):
+
     permission_classes = (IsAuthenticated,)
     serializer_class = TokenRefreshSerializer
 
@@ -135,6 +136,7 @@ class TokenRefreshView(CreateAPIView):
 
 # User Info View
 class UserInfoView(RetrieveAPIView):
+
     permission_classes = (IsAuthenticated,)
     serializer_class = ListUserSerializer
 
@@ -142,7 +144,6 @@ class UserInfoView(RetrieveAPIView):
 
         try:
             user = User.objects.get(id=id)
-
         except User.DoesNotExist:
             raise Http404
 
@@ -165,9 +166,9 @@ class UserInfoView(RetrieveAPIView):
             "status_code": 200
         })
 
-
 # List Users View
 class ListUsersView(ListAPIView):
+
     serializer_class = ListUserSerializer
     queryset = User.objects.all()
     pagination_class = CustomPagination
@@ -208,7 +209,7 @@ class ListUsersView(ListAPIView):
 
         except ValueError:
             raise MessageError({"status_code": 400, "message": "El limite o el skip tiene que ser de tipo numerico"},
-                               status.HTTP_400_BAD_REQUEST)
+                                status.HTTP_400_BAD_REQUEST)
 
         return queryset
 
@@ -230,15 +231,16 @@ class ListUsersView(ListAPIView):
 
 # Search Users View
 class SearchUsersView(ListAPIView):
+
     serializer_class = ListUserSerializer
     pagination_class = CustomPagination
 
     def get(self, request, format=None):
 
-        username = request.GET.get('username', None)
-        email = request.GET.get('email', None)
-        first_name = request.GET.get('first_name', None)
-        last_name = request.GET.get('last_name', None)
+        username = request.query_params.get('username', None)
+        email = request.query_params.get('email', None)
+        first_name = request.query_params.get('first_name', None)
+        last_name = request.query_params.get('last_name', None)
 
         filters = Q()
         if username is not None:
@@ -252,6 +254,9 @@ class SearchUsersView(ListAPIView):
 
         users = User.objects.filter(filters)
 
+        if not users.exists():
+            return Response({"status": 204, "message": "Usuario no encontrado"}, status.HTTP_204_NO_CONTENT)
+
         result_page = self.paginate_queryset(users)
         serializer = self.get_serializer(result_page, many=True)
 
@@ -260,6 +265,7 @@ class SearchUsersView(ListAPIView):
 
 # Filter User View
 class FilterUserView(ListAPIView):
+
     queryset = User.objects.all()
     serializer_class = ListUserSerializer
 
@@ -277,14 +283,17 @@ class FilterUserView(ListAPIView):
 
         try:
             if min_age is not None:
+
                 today = date.today()
                 min_birth_date = today.replace(year=today.year - int(min_age))
                 query &= Q(birthdate__lte=min_birth_date)
 
             if max_age:
+
                 today = date.today()
                 max_birth_date = today.replace(year=today.year - int(max_age) - 1)
                 query &= Q(birthdate__gte=max_birth_date)
+
         except ValueError:
             raise MessageError({"status_code": 400, "message": "La edad tiene que ser en formato numerico"})
 
@@ -311,7 +320,6 @@ class FilterUserView(ListAPIView):
             )
 
         return self.get_paginated_response(serializer.data)
-
 
 # Detail, Update and Delete User View
 class DetailUserView(RetrieveUpdateDestroyAPIView):
